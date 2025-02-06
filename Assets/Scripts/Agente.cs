@@ -1,21 +1,19 @@
+using System;
+using System.Collections.Generic;
+
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.AI;
-using System;
+using UnityEngine.EventSystems;
 
 public class Agente : MonoBehaviour
 {
-    Transform target;
-    [SerializeField] Text pathText, agenteFeedback;
+    [SerializeField] Text pathText;
+    [SerializeField] Dropdown partida, chegada;
+    [SerializeField] Material partidaMat, chegadaMat, percusoMat, defaultMat;
     [SerializeField] LayerMask layerMask;
-    NavMeshAgent agent;
 
     Node[] path;
     public Node[] nodes;
-    int pathPosition = 0;
-    bool ativado = false;
-
-    void Awake() => agent = GetComponent<NavMeshAgent>();
 
     private void Start()
     {
@@ -24,7 +22,7 @@ public class Agente : MonoBehaviour
 
         foreach (var item in objects)
         {
-            string label = item.name[^1].ToString();
+            string label = item.name[^2..].Trim();
             Manager manager = item.GetComponent<Manager>();
 
             var node = manager.CriarNode(label, layerMask);
@@ -40,35 +38,77 @@ public class Agente : MonoBehaviour
 
         SortNodes();
 
-        // Proximo passo, colocar pra selecionar o caminho pelo Canvas baseado nos nodes ordenados
-        // Criar um botao Começar para ativar o agente
+        nodes[0].Obj.GetComponentInChildren<Manager>().Ativar();
 
-        IShortestPathFinder pathFinder = new Dijkstra();
-        //path = pathFinder.FindShortestPath(a, p);
+        List<string> options = new();
 
-        if (path != null)
-        {
-            var temp = "Caminho: ";
-            foreach (var node in path)
-                temp += $"{node.Label} - ";
-            pathText.text = temp[..^3];
-        }
-        else print("Não há caminho disponível entre os nós especificados.");
+        foreach (var item in nodes)
+            options.Add(item.Label);
+
+        partida.AddOptions(options);
+        chegada.AddOptions(options);
     }
 
-    void Update()
+    public void OnValueChanged(Int32 value)
     {
-        if (!ativado) return;
-        if (pathPosition < path.Length)
-        {
-            if (pathPosition > 0)
-                agenteFeedback.text = $"O agente esta se direcionando para o ponto {path[pathPosition].Label}";
+        GameObject item = EventSystem.current.currentSelectedGameObject;
+        Transform caller = item.transform;
+        for (int i = 0; i < 4; i++) caller = caller.parent;
+        Dropdown dropdown = caller.GetComponent<Dropdown>();
 
-            if (Vector3.Distance(transform.position, path[pathPosition].Obj.position) > 1f)
-                agent.SetDestination(path[pathPosition].Obj.position);
-            else pathPosition++;
+        var material = GetMaterial(caller.name);
+
+        for (int i = 0; i < nodes.Length; i++)
+        {
+            var temp = GetMaterial(nodes[i]).name.Remove(material.name.Length);
+
+            if (temp.Equals(material.name)) SetMaterial(nodes[i], defaultMat);
         }
-        else agenteFeedback.text = "O agente chegou ao destino";
+
+        if (value > 0)
+        {
+            var temp = GetMaterial(nodes[value - 1]).name.Remove(defaultMat.name.Length);
+            var temp2 = GetMaterial(nodes[value - 1]).name.Remove(percusoMat.name.Length);
+
+            if (temp.Equals(defaultMat.name) || temp2.Equals(percusoMat.name)) SetMaterial(nodes[value - 1], material);
+            else dropdown.value = 0;
+        }
+
+        Dijkstra();
+    }
+
+    private void Dijkstra()
+    {
+        for (int i = 0; i < nodes.Length; i++)
+        {
+            var node = GetMaterial(nodes[i]).name.Remove(percusoMat.name.Length);
+
+            if (node.Equals(percusoMat.name)) SetMaterial(nodes[i], defaultMat);
+        }
+
+        if (partida.value > 0 && chegada.value > 0)
+        {
+            IShortestPathFinder pathFinder = new Dijkstra();
+
+            Node node1 = nodes[partida.value - 1], node2 = nodes[chegada.value - 1];
+
+            path = pathFinder.FindShortestPath(node1, node2);
+
+            if (path != null)
+            {
+                var temp = "Caminho:\n";
+                foreach (var node in path)
+                {
+                    temp += $"{node.Label} - ";
+
+                    var temp2 = GetMaterial(node).name.Remove(defaultMat.name.Length);
+                    if (temp2.Equals(defaultMat.name)) SetMaterial(node, percusoMat);
+                }
+                    
+                pathText.text = temp[..^3];
+            }
+            else print("Não há caminho disponível entre os nós especificados.");
+        }
     }
 
     private void SortNodes()
@@ -79,14 +119,44 @@ public class Agente : MonoBehaviour
 
             for (int i = 0; i < nodes.Length - 1; i++)
             {
-                if (nodes[i].Label[0] > nodes[i + 1].Label[0])
+                if (nodes[i].Label.Length > nodes[i + 1].Label.Length)
                 {
                     (nodes[i], nodes[i + 1]) = (nodes[i + 1], nodes[i]);
                     stop = false;
+                }
+                else if (nodes[i].Label.Length == nodes[i + 1].Label.Length)
+                {
+                    if (nodes[i].Label[^1] > nodes[i + 1].Label[^1])
+                    {
+                        (nodes[i], nodes[i + 1]) = (nodes[i + 1], nodes[i]);
+                        stop = false;
+                    }
                 }
             }
 
             if (stop) break;
         }
+    }
+
+    private void SetMaterial(Node node, Material material)
+    {
+        MeshRenderer renderer = node.Obj.GetComponentInChildren<MeshRenderer>();
+        renderer.material = material;
+    }
+
+    private Material GetMaterial(Node node)
+    {
+        MeshRenderer renderer = node.Obj.GetComponentInChildren<MeshRenderer>();
+        return renderer.material;
+    }
+
+    private Material GetMaterial(string caller)
+    {
+        return caller switch
+        {
+            "Partida" => partidaMat,
+            "Chegada" => chegadaMat,
+            _ => null
+        };
     }
 }

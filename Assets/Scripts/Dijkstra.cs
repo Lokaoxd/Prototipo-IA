@@ -1,5 +1,4 @@
 using System.Linq;
-
 using System.Collections.Generic;
 
 interface IShortestPathFinder

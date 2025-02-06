@@ -1,10 +1,9 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class Manager : MonoBehaviour
 {
-    Node node;
+    Node node, nodeAnterior;
     LayerMask mask;
     bool ativado;
     float scaleCube;
@@ -20,11 +19,19 @@ public class Manager : MonoBehaviour
         mask = _mask;
         return node;
     }
-
-    public void Ativar() => ativado = true;
-    public void Desativar() => ativado = false;
+    public void Ativar(Node node = null)
+    {
+        ativado = true;
+        nodeAnterior = node;
+    }
     public void AddNode(Node node) => nodesConnected.Add(node);
-    private bool Contains(Node node) => nodesConnected.Contains(node);
+    private bool Contains(Node node)
+    {
+        foreach (var item in nodesConnected)
+            if (item.Label.Equals(node.Label))
+                return true;
+        return false;
+    }
 
     private void FixedUpdate()
     {
@@ -37,12 +44,16 @@ public class Manager : MonoBehaviour
 
             if (manager != null)
             {
-                if (!Contains(manager.node))
+                if (manager.node != nodeAnterior)
                 {
-                    manager.AddNode(node);
-                    node.ConnectTo(manager.node);
-                    manager.Ativar();
-                    Debug.DrawRay(transform.position + (Vector3.forward * scaleCube), transform.TransformDirection(Vector3.forward) * hit.distance, Color.green);
+                    if (!Contains(manager.node))
+                    {
+                        manager.AddNode(node);
+                        AddNode(manager.node);
+                        node.ConnectTo(manager.node);
+                        manager.Ativar(node);
+                    }
+                    else Debug.DrawRay(transform.position + (Vector3.forward * scaleCube), transform.TransformDirection(Vector3.forward) * hit.distance, Color.green);
                 }
             }
             else Debug.DrawRay(transform.position + (Vector3.forward * scaleCube), transform.TransformDirection(Vector3.forward) * hit.distance, Color.red);
@@ -55,11 +66,15 @@ public class Manager : MonoBehaviour
 
             if (manager != null)
             {
-                if (!Contains(manager.node))
+                if (manager.node != nodeAnterior)
                 {
-                    manager.AddNode(node);
-                    node.ConnectTo(manager.node);
-                    manager.Ativar();
+                    if (!Contains(manager.node))
+                    {
+                        manager.AddNode(node);
+                        AddNode(manager.node);
+                        node.ConnectTo(manager.node);
+                        manager.Ativar(node);
+                    }
                     Debug.DrawRay(transform.position + (Vector3.right * scaleCube), transform.TransformDirection(Vector3.right) * hit1.distance, Color.green);
                 }
             }
@@ -73,11 +88,15 @@ public class Manager : MonoBehaviour
 
             if (manager != null)
             {
-                if (!Contains(manager.node))
+                if (manager.node != nodeAnterior)
                 {
-                    manager.AddNode(node);
-                    node.ConnectTo(manager.node);
-                    manager.Ativar();
+                    if (!Contains(manager.node))
+                    {
+                        manager.AddNode(node);
+                        AddNode(manager.node);
+                        node.ConnectTo(manager.node);
+                        manager.Ativar(node);
+                    }
                     Debug.DrawRay(transform.position + (Vector3.left * scaleCube), transform.TransformDirection(Vector3.left) * hit2.distance, Color.green);
                 }
             }
@@ -91,11 +110,15 @@ public class Manager : MonoBehaviour
 
             if (manager != null)
             {
-                if (!Contains(manager.node))
+                if (manager.node != nodeAnterior)
                 {
-                    manager.AddNode(node);
-                    node.ConnectTo(manager.node);
-                    manager.Ativar();
+                    if (!Contains(manager.node))
+                    {
+                        manager.AddNode(node);
+                        AddNode(manager.node);
+                        node.ConnectTo(manager.node);
+                        manager.Ativar(node);
+                    }
                     Debug.DrawRay(transform.position + (Vector3.back * scaleCube), transform.TransformDirection(Vector3.back) * hit3.distance, Color.green);
                 }
             }
